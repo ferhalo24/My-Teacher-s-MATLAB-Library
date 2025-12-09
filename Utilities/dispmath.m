@@ -1,0 +1,13 @@
+function dispmath(fmt,varargin)
+%Example:
+%    dispmath("my formula z=$%s$ and $%s$",latex(z),latex(x^3));
+%Ref: https://www.reddit.com/r/matlab/comments/14j4tx7/is_there_a_way_to_get_matlab_to_render_latex/
+f1=figure(Color='w');
+axis off
+t1=text(0,0, ...
+    sprintf(fmt, ...
+    varargin{:}), ...
+    Interpreter="latex", ...
+    fontsize=12);
+f1.Position = [0 0 f1.Position(3:4).*t1.Extent(3:4)];
+end
