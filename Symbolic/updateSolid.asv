@@ -1,0 +1,40 @@
+function Solid=updateSolid(n_Solids)
+
+global Bases
+global BasesNames %We put frame names in BasesNames to get Frame Base
+global Points
+global PointsNames
+global Frames
+global FramesNames
+global Solids n_Solids
+global SolidsNames NamesSolids
+
+global param
+global param_value
+
+if not(isempty(Solids(n_Solids).stl_constructor))
+    reconstruct(Solids(n_Solids).stl_constructor);
+    fv = stlRead(Solids(n_Solids).stl_constructor.stl_file_name);
+    [mass_n,first_moment_of_mass,inertia_tensor]=inert_prop(fv,Solids(n_Solids).rho);
+    
+    Solids(n_Solids).fv = fv;
+    if Solids(n_Solids).mass~= sym(0)
+        Set_value(Solids(n_Solids).mass,mass_n);
+    end
+    for i=1:3
+        if Solids(n_Solids).first_mass_moment(i)~= sym(0)
+            Set_value(Solids(n_Solids).mass,mass_n);
+        end
+    end
+    Solids(n_Solids).first_mass_moment=Vector3D(first_mass_moment_s,base_name);
+    Solids(n_Solids).inertia_tensor=Vector3D(inertia_tensor_s,base_name);
+    Solids(n_Solids).inertia_tensor_point=PointsNames(frame_name);
+    if mass_s ~= sym(0)
+        Solids(n_Solids).G=['G_',new_solid_name];
+        newPoint(point_name,Solids(n_Solids).G,Solids(n_Solids).first_mass_moment*(1/mass_s));
+    else
+        warning('Solid %s mass is cero and therefore inertia center is undefined', Solids(n_Solids).Frame);
+    end
+    
+end
+end
