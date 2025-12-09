@@ -1,0 +1,36 @@
+function setCamProj(proj_name)
+% SETCAMPROJ Set the camera projection type 'perspective' 'orthographic'.
+%   SETCAMPROJ(PROJ_NAME) sets the camera's projection matrix
+%   to the specified PROJECTIONMATRIX. This matrix defines how 3D
+%   points are projected onto the 2D view plane.
+%
+%   Example:
+%       setCamProj('orthographic')
+%       % Sets the camera projection to 'orthographic'.
+%
+%   See also RESETCAMVIEWANGLE, RESETCAMUP, RESETCAMPOS, RESETCAMTARGET,
+%   RESETCAMPROJ, SETCAMVIEWANGLE, SETCAMUP,SETCAMPOS, SETCAMTARGET, SETCAMPROJ
+
+global q t param
+global q_value t_value param_value
+global ax
+global cam_target_use
+global cam_pos_use
+global cam_view_angle_use
+global cam_view_angle
+global cam_up_use
+global cam_proj_use
+global cam_proj_name
+
+if ~strcmp(proj_name, 'perspective') && ~strcmp(proj_name, 'orthographic')
+    error('Invalid projection type. Use ''perspective'' or ''orthographic''.');
+end
+
+cam_proj_use = true; % 'perspective' 'orthographic'
+cam_proj_name = proj_name;
+
+
+updateCam;
+
+drawnow limitrate nocallbacks;
+end

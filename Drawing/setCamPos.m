@@ -1,0 +1,37 @@
+function setCamPos(point_name)
+%SETCAM_OS Set the camera position based on the specified point name.
+%
+%   SETCAMPOS(POINT_NAME) sets the camera position to the coordinates
+%   defined by the point POINT_NAME. This function utilizes
+%   global variables to manage camera settings and updates the camera view.
+%
+%   Inputs:
+%       POINT_NAME - A string representing the name of the point to set
+%                    the camera position.
+%
+%   Example:
+%       setCamPos('A') sets the camera position to the coordinates
+%       of Point with name 'A'.
+%
+%   See also RESETCAMVIEWANGLE, RESETCAMUP, RESETCAMPOS, RESETCAMTARGET,
+%   RESETCAMPROJ, SETCAMVIEWANGLE, SETCAMUP,SETCAMPOS, SETCAMTARGET, SETCAMPROJ
+
+global q t param
+global q_value t_value param_value
+global ax
+global cam_target_use
+global cam_pos_use
+global cam_view_angle_use
+global cam_view_angle
+global cam_up_use
+global cam_proj_use
+global cam_proj_name
+
+cam_pos=Pos('O',point_name).inBase('xyz');
+matlabFunction(cam_pos.Value,'File','cam_pos_','Vars',{q,t,param},'Optimize',true);
+cam_pos_use=true;
+
+updateCam;
+
+drawnow limitrate nocallbacks;
+end

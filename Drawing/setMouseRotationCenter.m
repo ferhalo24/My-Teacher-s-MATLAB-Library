@@ -1,0 +1,20 @@
+function setMouseRotationCenter()
+global ax
+global ax_Xlimit
+global ax_Ylimit
+global ax_Zlimit
+global cam_target_use
+global cam_pos_use
+global cam_view_angle_use
+global cam_view_angle
+global cam_up_use
+global cam_proj_use
+global cam_proj_name
+
+xlim(xlim+ax_Xlimit);
+ylim(ylim+ax_Ylimit);
+zlim(zlim+ax_Zlimit);
+
+updateDraws;
+
+drawnow limitrate nocallbacks;

@@ -1,0 +1,84 @@
+function draw_handle=newFVDraw(Frame_name,fvc,color,vector_z_scale)
+global Frames
+global FramesNames
+global Points
+global PointsNames
+
+global t
+
+global q
+global dq
+global ddq
+global param
+global epsilon
+
+global t_value
+
+global q_value
+global dq_value
+global ddq_value
+global param_value
+global epsilon_value
+
+global Draws
+
+global optimize_matlabFunction
+
+if isequal(size(color),[1,3]) 
+    color=[color,1];
+end
+
+n_patchs=length(fvc);
+
+if isequal(size(color),[1,4])
+    colors=zeros(n_patchs,4);
+    for i=1:n_patchs
+        colors(i,:)=color;
+    end
+    color=colors;
+end
+
+
+transform_function_name=strcat(Frame_name,'_transform');
+
+if exist(transform_function_name)~=2
+    if ischar(Frame_name) && isKey(FramesNames,Frame_name)
+        Frame_number=FramesNames(Frame_name);
+        if Frame_number==0
+            Point=0;
+            Base=0;
+        else
+            Point=Frames(Frame_number).Point;
+            Base=Frames(Frame_number).Base;
+        end
+    elseif ischar(Frame_name) && isKey(PointsNames,Frame_name)
+        Point=PointsNames(Frame_name);
+        Base=0;  
+    else
+        error('First Parameter is a Frame name');
+    end
+    OC=Pos('O',Point);
+    if not(isempty(OC.Base) || OC.Base==0)
+        
+        OC.Value=BasMatr('xyz',OC.Base)*OC.Value;
+        OC.Base=0;
+    end
+
+    matlabFunction(sym(OC.Value),sym(BasMatr('xyz',Base)'),'File',transform_function_name,'Vars',{q,dq,ddq,t,param},'Outputs',{'translation','rotation'},'Optimize',optimize_matlabFunction);
+
+end
+
+ if nargin==3
+        vector_z_scale=[1,1,1];
+ end
+    
+n_Draws=length(Draws);
+n_Draws=n_Draws+1;
+
+if n_Draws==1
+    Draws=Draw3DClass(Frame_name,fvc,[],color,transform_function_name,vector_z_scale);
+else
+    Draws(n_Draws)=Draw3DClass(Frame_name,fvc,[],color,transform_function_name,vector_z_scale);
+end
+draw_handle=Draws(n_Draws);
+ 
