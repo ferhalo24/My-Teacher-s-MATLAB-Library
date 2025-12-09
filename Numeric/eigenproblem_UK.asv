@@ -1,0 +1,63 @@
+function [eigenvalues_z_dz,eigenvectors_z,eigenvectors_dz,eigenvectors_q,eigenvectors_dq,A,perm_d_z,perm_dd_dz]=eigenproblem_VP_numerical_z_dz(given_perm_d_z,given_perm_dd_dz)
+lobal eigenvalues
+global q_value dq_value ddq_value lambda_value lambda_aux_value t_value param_value
+global q n_q
+
+global has_my_piezewise_functions_in_Phi
+
+if has_my_piezewise_functions_in_Phi
+    my_piezewise_functions_in_Phi();
+end
+
+
+% %% Eigenvalue and Eigenvector Problem Udwadia and Kabala style
+% if n_dPhi==0
+%     M_qq=M_qq_(q_value,t_value,param_value);
+%     
+%     C_qq=C_qq_(q_value,dq_value,t_value,param_value);
+%     K_qq=K_qq_(q_value,dq_value,ddq_value,lambda_value,lambda_aux_value,t_value,param_value);
+% 
+%     invM_qq=inv(M_qq);
+%     
+%     A=[zeros(n_q,n_q),eye(n_q);
+%         -invM_qq*K_qq, -invM_qq*C_qq];
+%     
+%     [eigenvectors_are_columns,eigenvalues] = eig(A);
+%     
+%     eigenvectors_are_columns,eigenvalues=diag(eigenvalues);
+%     disp('Eigenvectors (columns):');
+%     eigenvectors_are_columns
+%     disp('in rad per second:');
+%     eigenvalues
+%     disp('in cycles per second:');
+%     eigenvalues/(2*pi)
+% else
+
+Phi_q_num=[Phi_q_(q_value,t_value,param_value);
+    PhiAux_q_(q_value,t_value,param_value)];
+
+dPhi_dq_num=[dPhi_dq_(q_value,t_value,param_value);
+    dPhiAux_dq_(q_value,t_value,param_value)];
+
+M_qq_num=M_qq_(q_value,t_value,param_value);
+C_qq_num=C_qq_(q_value,dq_value,t_value,param_value);
+K_qq_num=K_qq_(q_value,dq_value,ddq_value,lambda_value,lambda_aux_value,t_value,param_value);
+
+inv_M_qq_num=inv(M_qq_num);
+aux=dPhi_dq*inv_M_qq_num;
+
+weightpinvdPhi_dq=aux'*pinv(aux*dPhi_dq');
+PainvM_qq=inv_M_qq_num-weightpinvdPhi_dq*aux;
+
+ddPhi_q=ddPhi_q_(q_value,dq_value,ddq_value,t_value,param_value);
+ddPhi_dq=ddPhi_dq_(q_value,dq_value,t_value,param_value);
+
+A=[zeros(n_q,n_q),eye(n_q);
+    -PainvM_qq*K_qq_num-weightpinvdPhi_dq*ddPhi_q, -PainvM_qq*C_qq_num-weightpinvdPhi_dq*ddPhi_dq];
+
+[eigenvectors_are_columns,eigenvalues] = eig(A);
+
+eigenvalues=diag(eigenvalues), eigenvectors_are_columns
+    
+    
+end
