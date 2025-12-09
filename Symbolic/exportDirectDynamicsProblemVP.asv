@@ -1,0 +1,161 @@
+
+# Export Direct Dynamics Problem. Virtual Power or  *Lagrange* Formalisms
+
+Exporting functions with the NEW NAMING CONVENTION
+
+
+To solve VP Dynamics equations along with constraint equations at the acceleration level. Estructure with constraint unknowns
+
+ $$ {\mathbf{e}}^{Dyn,VP} ={\mathbf{M}}_{\dot{\mathbf{q}} \ddot{\mathbf{q}} } \ddot{\mathbf{q}} -{\mathbf{f}}_{\dot{\mathbf{q}} \epsilon }^C \mathbf{\epsilon }-{\mathbf{\delta }}_{\dot{\mathbf{q}} } =\mathbf{0} $$ 
+
+Structure with lagrange multipliers
+
+ $$ {\mathbf{e}}^{Dyn,VP} ={\mathbf{M}}_{\dot{\mathbf{q}} \ddot{\mathbf{q}} } \ddot{\mathbf{q}} +{\dot{\mathbf{\phi }} }_{\dot{\mathbf{q}} }^T \mathbf{\lambda }-{\mathbf{\delta }}_{\dot{\mathbf{q}} } =\mathbf{0} $$ 
+
+Solvable along with constraint equations at the acceleration level
+
+ $$ \ddot{\phi} (\mathbf{q},\dot{\mathbf{q}} ,\ddot{\mathbf{q}} ,t)={\dot{\phi} }_{\dot{\mathbf{q}} } (\mathbf{q},t)\ddot{\mathbf{q}} -\gamma (\mathbf{q},\dot{\mathbf{q}} ,t)=\mathbf{0} $$ 
+
+for $\ddot{\mathbf{q}}$ and $\mathbf{\lambda }$ 
+
+ $$ {\mathbf{e}}^{Dyn,VP} =\left\lbrack \begin{array}{cc} {\mathbf{M}}_{\dot{\mathbf{q}} \dot{\mathbf{q}} }  & {\dot{\phi} }_{\dot{\mathbf{q}} }^T \\ {\dot{\phi} }_{\dot{\mathbf{q}} }  & \mathbf{0} \end{array}\right\rbrack \left\lbrack \begin{array}{l} \ddot{\mathbf{q}} \\ \mathbf{\lambda } \end{array}\right\rbrack +\left\lbrack \begin{array}{c} -{\mathbf{\delta }}_{\mathbf{v}} \\ -\mathbf{\gamma } \end{array}\right\rbrack =\left\lbrack \begin{array}{l} \mathbf{0}\\ \mathbf{0} \end{array}\right\rbrack $$ 
+
+we need to export the mass matrix, ${\mathbf{M}}_{\dot{\mathbf{q}} \ddot{\mathbf{q}} }$, the jacobian of the constraint forces, ${\mathbf{f}}_{\dot{\mathbf{q}} \epsilon }^C$, and the independent term $\mathbf{\delta_{\dot{\mathbf{q}} } }$ (other matrix functions already exported when exporting the Assembly Problem). As can be seen, the contribution of the constraint unknowns ${\mathbf{f}}_{\dot{\mathbf{q}} \mathbf{\epsilon }}^C \mathbf{\epsilon }$, can be expresed in terms of teh *Lagrange* multipliers, ${\dot{\mathbf{\phi }} }_{\dot{\mathbf{q}} }^T \mathbf{\lambda }$, we can recover  subset of constraint unknows $\mathbf{\epsilon }$ related to the joint enforcing sontrints, in terms of the Lagrange multipliers $\mathbf{\lambda }$. 
+
+ $$ -{\mathbf{f}}_{\dot{\mathbf{q}} \epsilon }^C \mathbf{\epsilon }={\dot{\mathbf{\phi }} }_{\dot{\mathbf{q}} }^T \mathbf{\lambda }\Rightarrow \mathbf{\epsilon }=-{{\mathbf{f}}_{\dot{\mathbf{q}} \epsilon }^C }^+ {\dot{\mathbf{\phi }} }_{\dot{\mathbf{q}} }^T $$ 
+```matlab
+function Export_Direct_Dynamics_Problem_VP()
+
+global t q dq ddq epsilon lambda param
+global Dyn_eq_VP Dyn_eq_L M_qq delta_q FC_qepsilon dPhi_dq
+global Dyn_eq_VP_OC M_OCqq delta_OCq FC_OCqepsilon
+global optimize_matlabFunction
+```
+
+Determine expressions for the to\-be exported functions.
+
+
+By default we asume that the constraint contribution to the VP dynamic equations has been given in terms of the set $\mathbf{\epsilon }$. Removing these, if any, will lead to the dynamic equations of the "Open" system. Basically, if the joints enforzed trough constraints equations (not by the parameterization) would not be present , no $\mathbf{\epsilon }$ twould appear in the VP equations. Conversely, if considered only the subset of $\mathbf{\epsilon }$ associated with the joints enforced through the constraints would appear.
+
+```matlab
+Dyn_eq_VP_open=subs(Dyn_eq_VP,epsilon,sym(zeros(size(epsilon))));
+```
+
+Now we express the constraint contribution to the VP dynamic equations in terms of the *Lagrange* multipliers (dyamic direct problem $\mathbf{A}\mathbf{x}=\mathbf{b}$ leading matrix $\mathbf{A}$ is symmetric and, in $\mathbf{x}$, $\mathbf{\epsilon }$ is substituted by $\mathbf{\lambda }$, $\mathbf{x}=[{\ddot{\mathbf{q}} }^T ,{\mathbf{\lambda }}^T ]^T$.
+
+```matlab
+clearLambdas();
+newLambdas();
+Dyn_eq_L=Dyn_eq_VP_open+dPhi_dq'*lambda;
+```
+
+Determine the expression for mass matrix ${\mathbf{M}}_{\dot{q} \ddot{q} }$, and check that it is positive definite.
+
+```matlab
+M_dq_ddq=jacobian(Dyn_eq_VP,ddq);
+if min(eig(getValue(M_dq_ddq))) <0
+    error('Mass matrix, M_dq_ddq, is not positive semi definite');
+end
+```
+
+Determine expression for ${\mathbf{\delta }}_{\dot{\mathbf{q}} }$ 
+
+```matlab
+delta_q=subs(Dyn_eq_VP,epsilon,sym(zeros(size(epsilon))));
+delta_q=subs(delta_q,lambda,sym(zeros(size(lambda))));
+delta_q=-subs(delta_q,ddq,zeros(size(ddq)));
+```
+
+Determine the expression for ${\mathbf{f}}_{\dot{\mathbf{q}} \mathbf{\epsilon }}^C$.
+
+```matlab
+FC_qepsilon=-jacobian(Dyn_eq_VP,epsilon);
+```
+
+MATLAB Symbolic Toolbox `matlabFunction` function is used to export the required functions  from symbolic expresions to be used in the numerical solvers. Notice the function dependencies.
+
+```matlab
+matlabFunction(FC_qepsilon,'File','FC_qepsilon_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(M_qq,'File','M_qq_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(delta_q,'File','delta_q_','Vars',{q,dq,t,param},'Optimize',optimize_matlabFunction);
+```
+
+Exporting functions with the NEW NAMING CONVENTION
+
+
+We want as well to export the Jacobian of the "SystemTwist" w.r.t. the generalized velocity vector: $\frac{\partial }{\partial \dot{\mathbf{q}} }\mathbf{V}$ 
+
+```matlab
+V_dq=jacobian(V,dq);
+M_V_ddq=jacobian(Dyn_eq_NE,ddq);
+
+M_dq_ddq=jacobian(Dyn_eq_VP,ddq);
+```
+
+Determine the expression for ${\mathbf{f}}_{\dot{\mathbf{q}} \mathbf{\epsilon }}^C$.
+
+```matlab
+delta_V=subs(Dyn_eq_NE,epsilon,sym(zeros(size(epsilon))));
+delta_V=-subs(delta_V,ddq,zeros(size(ddq)));
+
+FC_V_epsilon=-jacobian(Dyn_eq_NE,epsilon);
+
+delta_dq=subs(Dyn_eq_VP,epsilon,sym(zeros(size(epsilon))));
+delta_dq=subs(delta_dq,lambda,sym(zeros(size(lambda))));
+delta_dq=-subs(delta_dq,ddq,zeros(size(ddq)));
+FC_dq_epsilon=-jacobian(Dyn_eq_VP,epsilon);
+
+V_dq_orth=null(V_dq');
+Dyn_eq_VP_orth=V_dq_orth'*Dyn_eq_NE;
+FC_dq_orth_epsilon=-jacobian(Dyn_eq_VP_orth,epsilon);
+delta_dq_orth=subs(Dyn_eq_VP_orth, epsilon,sym(zeros(size(epsilon))));
+delta_dq_orth=-subs(delta_dq_orth, ddq,sym(zeros(size(ddq))));
+
+M_dq_orth_ddq=jacobian(Dyn_eq_VP_orth,ddq);
+if debug_Dyn_eq_VP_orth==true
+    V_dq, M_V_dV, M_V_dV*V_dq, M_V_ddq, simplify(V_dq'*(M_V_dV*V_dq)), M_dq_ddq, simplify(V_dq'*M_V_ddq), FC_V_epsilon, V_dq_orth, Dyn_eq_VP_orth, FC_dq_orth_epsilon, delta_dq_orth, M_dq_orth_ddq
+end
+
+matlabFunction(FC_V_epsilon,'File','FC_V_epsilon_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(M_V_ddq,'File','M_V_ddq_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(delta_V,'File','delta_V_','Vars',{q,dq,t,param},'Optimize',optimize_matlabFunction);
+
+matlabFunction(M_dq_ddq,'File','M_dq_ddq_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(FC_dq_epsilon,'File','FC_dq_epsilon_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(delta_dq,'File','delta_dq_','Vars',{q,dq,t,param},'Optimize',optimize_matlabFunction);
+
+matlabFunction(M_V_dV,'File','M_V_dV_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(V_dq,'File','V_dq_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(V_dq_orth,'File','V_dq_orth_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(FC_dq_orth_epsilon,'File','FC_dq_orth_epsilon_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+matlabFunction(delta_dq_orth,'File','delta_dq_orth_','Vars',{q,dq,t,param},'Optimize',optimize_matlabFunction);
+
+matlabFunction(M_dq_orth_ddq,'File','M_dq_orth_ddq_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+
+```
+
+Lib\_3D\_MEC control  related, informs to the library that the VP Direct Dynamics Problem functions have been exported. In this way, it knows that it can be solved.
+
+```matlab
+setControl('direct_dynamics_problem_VP_exported',true);
+
+```
+
+**OLD ...Advanced**, to export the orthogonal complement of the VP equations.
+
+```matlab
+% if not(isempty(Dyn_eq_VP_OC))
+%     M_OCqq=jacobian(Dyn_eq_VP_OC,ddq);
+%     delta_OCq=subs(Dyn_eq_VP_OC,epsilon,sym(zeros(size(epsilon))));
+%     delta_OCq=subs(delta_OCq,lambda,sym(zeros(size(lambda))));
+%     delta_OCq=-subs(delta_OCq,ddq,zeros(size(ddq))); %delta=simplify(delta_q)
+%     FC_OCqepsilon=-jacobian(Dyn_eq_VP_OC,epsilon); %FC_vepsilon=simplify(FC_vepsilon);
+% 
+%     matlabFunction(FC_OCqepsilon,'File','FC_OCqepsilon_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+%     matlabFunction(M_OCqq,'File','M_OCqq_','Vars',{q,t,param},'Optimize',optimize_matlabFunction);
+%     matlabFunction(delta_OCq,'File','delta_OCq_','Vars',{q,dq,t,param},'Optimize',optimize_matlabFunction);
+% end
+% 
+% 
+% end
+```
